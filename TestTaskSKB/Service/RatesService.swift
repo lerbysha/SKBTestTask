@@ -10,7 +10,8 @@ import Foundation
 final class RatesService {
     private var rates: [Rate] = []
     private var graph: [String: [String: Decimal]] = [:]
-    
+    private var cache: [String: Decimal] = [:]
+
     init() {
         loadRates()
         buildGraph()
@@ -55,20 +56,27 @@ final class RatesService {
         if from == to {
             return amount
         }
+
+        let key = "\(from)->\(to)"
+        if let cachedRate = cache[key] {
+            return amount * cachedRate
+        }
+
         guard let pathRate = findRatePath(from: from, to: to, visited: []) else {
             debugPrint("No conversion path from \(from) to \(to)")
             return nil
         }
+
+        cache[key] = pathRate
         return amount * pathRate
     }
     
     private func findRatePath(from: String,
                               to: String,
                               visited: Set<String>) -> Decimal? {
-        
         var visited = visited
         visited.insert(from)
-        
+
         guard let edges = graph[from] else { return nil }
         
         if let directRate = edges[to] {
